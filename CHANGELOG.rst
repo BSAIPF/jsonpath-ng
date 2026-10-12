@@ -10,6 +10,31 @@ CHANGELOG
 
 ..  scriv-insert-here
 
+.. _changelog-1.10.1:
+
+1.10.1 - 2026-10-12
+===================
+
+Fixed
+-----
+
+*   Fix a ``TypeError`` crash that can occur when filtering scalar values.
+
+    This can only occur when a ``Filter`` has been instantiated without expressions.
+    (This usage is now deprecated.)
+
+Deprecated
+----------
+
+*   Deprecate instantiating ``Filter`` with no expressions.
+
+    It is impossible to encounter this deprecation via a parsed JSONPath string.
+
+    This deprecation helps align programmatic usage with RFC 9535,
+    which doesn't syntactically support filters without expressions.
+
+    This usage will raise an exception in version 2.0.0.
+
 .. _changelog-1.10.0:
 
 1.10.0 - 2026-10-09
