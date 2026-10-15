@@ -1,14 +1,6 @@
-import sys
-
 import pytest
 
 import jsonpath_ng.parser
-
-# Remove this skip marker when the `Descendants` methods aren't recursive.
-pytestmark = pytest.mark.skipif(
-    sys.version_info < (3, 12),
-    reason="Deeply nested data exceeds the recursion limit on Python 3.11",
-)
 
 benchmark_group = pytest.mark.benchmark(group="descendants")
 

@@ -110,7 +110,10 @@ class DatumInContext:
     ) -> None:
         self.__value__ = value
         self.path = path or This()
-        self.context = None if context is None else DatumInContext.wrap(context)
+        # This is a hot path, so avoid the overhead of calling `wrap()`.
+        if context is not None and not isinstance(context, DatumInContext):
+            context = DatumInContext(context)
+        self.context = context
 
     @property
     def value(self):
@@ -486,102 +489,87 @@ class Descendants(JSONPath):
 
         # Get all left matches into a list
         left_matches = self.left.find(datum)
+
+        # TODO: Remove this condition once all `find()` methods return lists.
         if not isinstance(left_matches, list):
             left_matches = [left_matches]
 
-        def match_recursively(datum):
-            right_matches = self.right.find(datum)
+        # Walk the data depth-first and in pre-order using an explicit stack.
+        # The next datum to visit is at the end of the list (which is cheap to pop),
+        # so children are pushed in reverse to be visited in their natural order.
+        right_find = self.right.find
+        matches: list[DatumInContext] = []
+        stack = left_matches[::-1]
+        while stack:
+            datum = stack.pop()
+            matches.extend(right_find(datum))
 
-            # Manually do the * or [*] to avoid coercion
-            # and recurse just the right-hand pattern
-            if isinstance(datum.value, list):
-                recursive_matches = [
-                    submatch
-                    for i in range(0, len(datum.value))
-                    for submatch in match_recursively(
-                        DatumInContext(datum.value[i], context=datum, path=Index(i))
-                    )
+            value = datum.value
+            if isinstance(value, list):
+                children = [
+                    DatumInContext(child, context=datum, path=Index(i))
+                    for i, child in enumerate(value)
                 ]
+                children.reverse()
+                stack.extend(children)
+            elif isinstance(value, dict):
+                stack.extend(
+                    DatumInContext(child, context=datum, path=Fields(field))
+                    for field, child in reversed(value.items())
+                )
 
-            elif isinstance(datum.value, dict):
-                recursive_matches = [
-                    submatch
-                    for field in datum.value.keys()
-                    for submatch in match_recursively(
-                        DatumInContext(
-                            datum.value[field], context=datum, path=Fields(field)
-                        )
-                    )
-                ]
-
-            else:
-                recursive_matches = []
-
-            return right_matches + list(recursive_matches)
-
-        # TODO: repeatable iterator instead of list?
-        return [
-            submatch
-            for left_match in left_matches
-            for submatch in match_recursively(left_match)
-        ]
+        return matches
 
     def is_singular(self):
         return False
 
     def update(self, data, val):
-        # Get all left matches into a list
+        # Get all left matches into a list.
         left_matches = self.left.find(data)
+
+        # TODO: Remove this condition once all `find()` methods return lists.
         if not isinstance(left_matches, list):
             left_matches = [left_matches]
 
-        def update_recursively(data):
-            # Update only mutable values corresponding to JSON types
-            if not (isinstance(data, list) or isinstance(data, dict)):
-                return
+        # Walk the data depth-first and in pre-order using an explicit stack.
+        # Children are pushed in reverse to be visited in their natural order.
+        stack = [submatch.value for submatch in reversed(left_matches)]
+        while stack:
+            node = stack.pop()
 
-            self.right.update(data, val)
+            # Update only mutable values corresponding to JSON types.
+            if not isinstance(node, (list, dict)):
+                continue
+
+            self.right.update(node, val)
 
             # Manually do the * or [*] to avoid coercion
-            # and recurse just the right-hand pattern
-            if isinstance(data, list):
-                for i in range(0, len(data)):
-                    update_recursively(data[i])
-
-            elif isinstance(data, dict):
-                for field in data.keys():
-                    update_recursively(data[field])
-
-        for submatch in left_matches:
-            update_recursively(submatch.value)
+            # and recurse just the right-hand pattern.
+            # The children are read after the update, which may have changed them.
+            stack.extend(reversed(node if isinstance(node, list) else node.values()))
 
         return data
 
     def filter(self, fn, data):
-        # Get all left matches into a list
+        # Get all left matches into a list.
         left_matches = self.left.find(data)
+
+        # TODO: Remove this condition once all `find()` methods return lists.
         if not isinstance(left_matches, list):
             left_matches = [left_matches]
 
-        def filter_recursively(data):
-            # Update only mutable values corresponding to JSON types
-            if not (isinstance(data, list) or isinstance(data, dict)):
-                return
+        stack = [submatch.value for submatch in reversed(left_matches)]
+        while stack:
+            node = stack.pop()
 
-            self.right.filter(fn, data)
+            # Filter only mutable values corresponding to JSON types.
+            if not isinstance(node, (list, dict)):
+                continue
 
-            # Manually do the * or [*] to avoid coercion
-            # and recurse just the right-hand pattern
-            if isinstance(data, list):
-                for i in range(0, len(data)):
-                    filter_recursively(data[i])
+            self.right.filter(fn, node)
 
-            elif isinstance(data, dict):
-                for field in data.keys():
-                    filter_recursively(data[field])
-
-        for submatch in left_matches:
-            filter_recursively(submatch.value)
+            # The children are read after the filter, which may have removed some.
+            stack.extend(reversed(node if isinstance(node, list) else node.values()))
 
         return data
 
