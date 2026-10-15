@@ -1,0 +1,4 @@
+Documentation
+-------------
+
+*   Include RFC 9535 and errata in the ``docs/rfc9535/`` directory.
