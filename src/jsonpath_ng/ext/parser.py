@@ -13,6 +13,7 @@
 import warnings
 
 from .. import Child
+from .. import Descendants
 from .. import Fields
 from .. import This
 from .. import lexer
@@ -153,6 +154,10 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
     def p_jsonpath_filter(self, p):
         "jsonpath : jsonpath '[' filter ']'"
         p[0] = Child(p[1], p[3])
+
+    def p_jsonpath_descendant_filter(self, p):
+        "jsonpath : jsonpath DOUBLEDOT '[' filter ']'"
+        p[0] = Descendants(p[1], p[4])
 
     def p_sort(self, p):
         "sort : SORT_DIRECTION jsonpath"
