@@ -798,11 +798,8 @@ class Index(JSONPath):
                 datum.value = _create_list_key(datum.value)
             self._pad_value(datum.value)
         rv = []
-        if isinstance(datum.value, dict):
-            # Integer indices apply to sequences, not mappings. A dict passes
-            # the len() check below but datum.value[index] is a key lookup that
-            # raises KeyError, so match nothing instead (as the class docstring
-            # promises) -- e.g. ``$.*[0]`` where ``*`` matched a dict value.
+        if not isinstance(datum.value, (list, tuple)):
+            # Integer indices only apply to arrays.
             return rv
         for index in self.indices:
             # invalid indices do not crash, return [] instead

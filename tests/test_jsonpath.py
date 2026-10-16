@@ -399,9 +399,15 @@ find_test_cases = (
         [34, 34, 29],
         ["[0]", "[-3]", "[-1]"],
     ),
-    # Indexing a dict matches nothing rather than raising KeyError (issue #93)
+    # Indexing something other than an array returns nothing
     ("[0]", {"foo": 1}, [], []),
     ("$.*[0].b", {"a": [{"b": 1}], "c": {"d": 2}}, [1], ["a.[0].b"]),
+    ("[0]", 5, [], []),
+    ("[-1]", 1.5, [], []),
+    ("[0]", True, [], []),
+    ("$..[0]", {"a": 5}, [], []),
+    ("$..[0]", {"a": [5, 6]}, [5], ["a.[0]"]),
+    ("$[0]", "abc", [], []),
     #
     # Slices
     # ------
