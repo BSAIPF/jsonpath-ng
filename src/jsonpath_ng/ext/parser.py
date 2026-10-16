@@ -143,6 +143,12 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
         # `null` is a literal in filter comparisons but is still a valid field name.
         p[0] = [p[1]]
 
+    def p_fields_bool(self, p):
+        "fields : BOOL"
+        # `true` and `false` are literals in filter comparisons but are still valid
+        # field names. The lexer has already converted the text to a Python bool.
+        p[0] = ["true" if p[1] else "false"]
+
     def p_expression_not(self, p):
         "expression : '!' jsonpath"
         p[0] = _filter.Expression(p[2], p[1], None)

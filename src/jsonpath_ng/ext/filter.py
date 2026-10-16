@@ -31,18 +31,20 @@ OPERATOR_MAP = {
     "=~": lambda a, b: True if isinstance(a, str) and re.search(b, a) else False,
 }
 
-# RFC 9535 section 2.3.5.2.2: `a != b` is true if and only if `a == b` is false, and
-# `a <= b` is true if and only if `a < b` or `a == b`. JSON null is neither less than
-# nor greater than any value, so ordering comparisons with `null` reduce to equality.
-# Each function receives whether the left-hand value is JSON null.
-NULL_OPERATOR_MAP = {
+# RFC 9535 section 2.3.5.2.2: `a != b` is true if and only if `a == b` is false,
+# and `a <= b` is true if and only if `a < b` or `a == b`.
+#
+# Only numbers and strings are ordered, so for JSON null and for booleans
+# the ordering comparisons reduce to equality.
+# Each function receives whether the two values are equal.
+EQUALITY_ONLY_OPERATOR_MAP = {
     "!=": operator.not_,
     "==": bool,
     "=": bool,
     "<=": bool,
     ">=": bool,
-    "<": lambda is_null: False,
-    ">": lambda is_null: False,
+    "<": lambda equal: False,
+    ">": lambda equal: False,
 }
 
 
@@ -134,7 +136,18 @@ class Expression(JSONPath):
         for data in found:
             value = data.value
             if null_comparison:
-                if NULL_OPERATOR_MAP[self.op](value is None):
+                if EQUALITY_ONLY_OPERATOR_MAP[self.op](value is None):
+                    result.append(data)
+                continue
+            if self.op != "=~" and (
+                isinstance(value, bool) or isinstance(self.value, bool)
+            ):
+                # A boolean is never equal to a number according to RFC 9535.
+                # However, in Python, bool is a subclass of int and is comparable
+                # via equality (`False == 0`, `True == 1`).
+                # Therefore, an identity comparison (`is`) is used,
+                # which relies on the fact that bools in Python are singletons.
+                if EQUALITY_ONLY_OPERATOR_MAP[self.op](value is self.value):
                     result.append(data)
                 continue
             if type(self.value) is int and isinstance(value, str):
