@@ -671,10 +671,14 @@ class Fields(JSONPath):
 
     WARNING: If '*' is any of the field names, then they will
     all be returned.
+    The wildcard also selects all of the elements of an array.
     """
 
     def __init__(self, *fields) -> None:
         self.fields = fields
+
+    def _is_wildcard_on_array(self, value) -> bool:
+        return "*" in self.fields and isinstance(value, (list, tuple))
 
     @staticmethod
     def get_field_datum(datum, field, create):
@@ -709,6 +713,8 @@ class Fields(JSONPath):
 
     def _find_base(self, datum, create):
         datum = DatumInContext.wrap(datum)
+        if self._is_wildcard_on_array(datum.value):
+            return Slice().find(datum)
         field_data = [
             self.get_field_datum(datum, field, create)
             for field in self.reified_fields(datum)
@@ -716,6 +722,8 @@ class Fields(JSONPath):
         return [fd for fd in field_data if fd is not None]
 
     def update(self, data, val):
+        if "*" in self.fields and isinstance(data, list):
+            return Slice().update(data, val)
         if not hasattr(data, "get"):
             return data
         return self._update_base(data, val, create=False)
@@ -738,6 +746,8 @@ class Fields(JSONPath):
         return data
 
     def filter(self, fn, data):
+        if "*" in self.fields and isinstance(data, list):
+            return Slice().filter(fn, data)
         if data is not None and isinstance(data, dict):
             for field in self.reified_fields(DatumInContext.wrap(data)):
                 if field in data:
