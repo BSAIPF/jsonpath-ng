@@ -10,6 +10,95 @@ CHANGELOG
 
 ..  scriv-insert-here
 
+.. _changelog-1.11.0:
+
+1.11.0 - 2026-10-16
+===================
+
+Breaking changes
+----------------
+
+*   When applying an index to a string, nothing will be returned.
+
+    Previously, an index applied to a string would "find" individual characters.
+    For example, ``$[0]`` applied to ``"abc"`` would find ``"a"``.
+
+    This change improves RFC 9535 compliance.
+
+*   Slices and the ``[*]`` wildcard no longer coerce scalars and objects into arrays. (#96)
+
+    Previously, ``$[*]`` applied to ``"abc"`` or ``5`` would find the value itself,
+    and ``$[*]`` applied to ``{"a": 1}`` would find the whole object.
+    This also caused ``$..[*]`` to return phantom nodes,
+    such as the root object and a second copy of each string.
+
+    Now, slices like ``[0:2]`` find nothing unless they are applied to an array,
+    and ``[*]`` finds the member values of an object or the elements of an array
+    and nothing from a scalar value.
+
+    This change improves RFC 9535 compliance.
+
+Fixed
+-----
+
+*   Fix ``RecursionError`` when paths using ``..`` are applied to deeply nested data.
+
+    It is still possible to encounter ``RecursionError``.
+    For example, very long JSONPath expressions can still raise ``RecursionError``.
+
+    Note that cyclic data structures can trigger indefinite execution,
+    as can updating data with a value that the path can match again.
+    Cyclic data structures are impossible to encounter in JSON
+    and can only be constructed programmatically in Python.
+
+*   Make ``Descendants.find()`` runtimes scale linearly with the depth of the data.
+
+*   Fix ``TypeError`` when an index like ``[0]`` is applied to a scalar value.
+
+    These values now match nothing, as required by RFC 9535.
+
+*   Fix ``..[*]`` omitting the member values of objects. (#96)
+
+*   Fix ``*`` (used as a field) omitting the elements of arrays. (#11, #164)
+
+    ``$.*`` and ``$..*`` now find array elements as well as object member values.
+
+    ``update()`` and ``filter()`` now also act on array elements for these wildcards.
+
+*   Fix a parse error when a filter follows ``..``, as in ``$..[?@.key]``. (#46)
+
+    The path now parses and selects every matching array element or object member value
+    at any depth, as required by RFC 9535.
+
+*   Allow filters to compare against JSON ``null`` values (``[?(@.v == null)]``). (#49)
+
+    An unquoted ``null`` no longer matches the string ``"null"``.
+    To compare a value to the word ``"null"``, quote it (``[?(@.v == 'null')]``).
+    ``null`` also continues to work as a field name, as in ``$.null``.
+
+    ``!= null`` now also matches members that are missing,
+    and ``<``, ``<=``, ``>``, and ``>=`` no longer raise a ``TypeError``
+    when compared with ``null``.
+
+*   Allow ``true`` and ``false`` to be used as field names in the extended parser.
+
+    For example: ``$.true`` and ``$[?@.false == false]``.
+
+    These previously raised a ``JsonPathParserError``.
+
+    Unquoted ``true`` and ``false`` on the right-hand side of a filter comparison
+    continue to be boolean literals.
+
+*   Stop treating booleans as numbers in filter comparisons.
+
+    Previously ``[?@.v == true]`` also matched ``1`` and ``[?@.v == 1]`` also matched ``true``.
+    A boolean is now never equal to a number, which follows RFC 9535.
+
+Documentation
+-------------
+
+*   Include RFC 9535 and errata in the ``docs/rfc9535/`` directory.
+
 .. _changelog-1.10.1:
 
 1.10.1 - 2026-10-12

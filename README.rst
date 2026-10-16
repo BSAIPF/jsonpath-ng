@@ -1,8 +1,8 @@
 Python JSONPath Next-Generation
 ===============================
 
-A final implementation of JSONPath for Python that aims to be standard compliant, including arithmetic
-and binary comparison operators, as defined in the original `JSONPath proposal`_.
+An implementation of JSONPath for Python that aims to be standards compliant,
+as defined in `RFC 9535`_.
 
 This packages merges both `jsonpath-rw`_ and `jsonpath-rw-ext`_ and
 provides several AST API enhancements, such as the ability to update or remove nodes in the tree.
@@ -356,6 +356,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-.. _`JSONPath proposal`: http://goessner.net/articles/JsonPath/
+.. _RFC 9535: https://www.rfc-editor.org/info/rfc9535/
 .. _`jsonpath-rw`: https://github.com/kennknowles/python-jsonpath-rw
 .. _`jsonpath-rw-ext`: https://pypi.python.org/pypi/jsonpath-rw-ext/
