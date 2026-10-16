@@ -562,6 +562,128 @@ test_cases = (
         ["B"],
         id="negative-int-rhs-no-float-truncation",
     ),
+    pytest.param(
+        "foo[?(@.v == null)].k",
+        {
+            "foo": [
+                {"k": "A", "v": None},
+                {"k": "B"},
+                {"k": "C", "v": "null"},
+                {"k": "D", "v": 0},
+            ]
+        },
+        ["A"],
+        id="null-literal-matches-json-null-only",
+    ),
+    pytest.param(
+        "foo[?@.v == null].k",
+        {"foo": [{"k": "A", "v": None}, {"k": "C", "v": "null"}]},
+        ["A"],
+        id="null-literal-without-parentheses",
+    ),
+    pytest.param(
+        "foo[?(@.v != null)].k",
+        {
+            "foo": [
+                {"k": "A", "v": None},
+                {"k": "B"},
+                {"k": "C", "v": "null"},
+                {"k": "D", "v": 0},
+            ]
+        },
+        ["B", "C", "D"],
+        id="null-literal-not-equal-includes-missing",
+    ),
+    pytest.param(
+        "$.b[?@ == null]",
+        {"b": [None]},
+        [None],
+        id="rfc-9535-table-17-null-comparison",
+    ),
+    pytest.param(
+        "$.c[?@.d == null]",
+        {"c": [{}]},
+        [],
+        id="rfc-9535-table-17-missing-is-not-null",
+    ),
+    pytest.param(
+        "$.b[?@ != null]",
+        {"b": [None, 1, "null"]},
+        [1, "null"],
+        id="null-literal-not-equal-over-scalars",
+    ),
+    pytest.param(
+        "$[?@ == null]",
+        {"x": None, "y": 1},
+        [None],
+        id="null-literal-filters-object-members",
+    ),
+    pytest.param(
+        "foo[?(@.v == 'null')].k",
+        {"foo": [{"k": "A", "v": None}, {"k": "C", "v": "null"}]},
+        ["C"],
+        id="single-quoted-null-is-a-string",
+    ),
+    pytest.param(
+        'foo[?(@.v == "null")].k',
+        {"foo": [{"k": "A", "v": None}, {"k": "C", "v": "null"}]},
+        ["C"],
+        id="double-quoted-null-is-a-string",
+    ),
+    pytest.param(
+        "foo[?@.v].k",
+        {"foo": [{"k": "A", "v": None}, {"k": "B"}]},
+        ["A"],
+        id="existence-test-sees-explicit-null",
+    ),
+    pytest.param(
+        "$.null",
+        {"null": 1},
+        [1],
+        id="null-as-a-field-name",
+    ),
+    pytest.param(
+        "$.a.null",
+        {"a": {"null": 2}},
+        [2],
+        id="null-as-a-nested-field-name",
+    ),
+    pytest.param(
+        "foo[?@.null == null].k",
+        {"foo": [{"k": "A", "null": None}, {"k": "B", "null": 1}]},
+        ["A"],
+        id="null-as-a-field-name-in-a-filter",
+    ),
+    pytest.param(
+        "foo[?@.v <= null].k",
+        {"foo": [{"k": "A", "v": None}, {"k": "B", "v": 1}]},
+        ["A"],
+        id="null-literal-less-than-or-equal",
+    ),
+    pytest.param(
+        "foo[?@.v >= null].k",
+        {"foo": [{"k": "A", "v": None}, {"k": "B", "v": 1}]},
+        ["A"],
+        id="null-literal-greater-than-or-equal",
+    ),
+    pytest.param(
+        "foo[?@.v < null].k",
+        {"foo": [{"k": "A", "v": None}, {"k": "B", "v": 1}]},
+        [],
+        id="null-literal-less-than",
+    ),
+    pytest.param(
+        "foo[?@.v > null].k",
+        {"foo": [{"k": "A", "v": None}, {"k": "B", "v": 1}]},
+        [],
+        id="null-literal-greater-than",
+    ),
+    pytest.param(
+        "foo[?@.v =~ null].k",
+        {"foo": [{"k": "A", "v": None}, {"k": "B", "v": "is null"}]},
+        ["B"],
+        id="regex-operator-keeps-null-as-pattern-text",
+    ),
 )
 
 

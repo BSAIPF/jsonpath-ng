@@ -30,7 +30,7 @@ class ExtendedJsonPathLexer(lexer.JsonPathLexer):
     _ply_table_module = "jsonpath_ng._ply_tables.ext_lexer_table"
     literals = lexer.JsonPathLexer.literals + ["?", "@", "+", "*", "/", "-", "!"]
     tokens = (
-        ["BOOL"]
+        ["BOOL", "NULL"]
         + parser.JsonPathLexer.tokens
         + ["FILTER_OP", "SORT_DIRECTION", "FLOAT"]
     )
@@ -52,6 +52,8 @@ class ExtendedJsonPathLexer(lexer.JsonPathLexer):
         # NOTE(sileht): This fixes the ID expression to be
         # able to use @ for `This` like any json query
         t.type = self.reserved_words.get(t.value, "ID")
+        if t.value == "null":
+            t.type = "NULL"
         return t
 
     def t_FLOAT(self, t):
@@ -123,12 +125,23 @@ class ExtendedJsonPathParser(parser.JsonPathParser):
         | jsonpath FILTER_OP FLOAT
         | jsonpath FILTER_OP NUMBER
         | jsonpath FILTER_OP BOOL
+        | jsonpath FILTER_OP NULL
         """
         if len(p) == 2:
             left, op, right = p[1], None, None
         else:
             __, left, op, right = p
+            if p.slice[3].type == "NULL":
+                # The literal `null` compares as JSON null, which `Expression`
+                # represents as `None`. The regex operator is not part of RFC 9535
+                # and has always taken the bare word as the text of its pattern.
+                right = "null" if op == "=~" else None
         p[0] = _filter.Expression(left, op, right)
+
+    def p_fields_null(self, p):
+        "fields : NULL"
+        # `null` is a literal in filter comparisons but is still a valid field name.
+        p[0] = [p[1]]
 
     def p_expression_not(self, p):
         "expression : '!' jsonpath"
